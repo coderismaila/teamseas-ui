@@ -1,37 +1,68 @@
-import { Box, Heading, VStack } from '@chakra-ui/react';
-import React from 'react';
+import {
+  Box,
+  Heading,
+  Radio,
+  RadioGroup,
+  Stack,
+  VStack,
+} from '@chakra-ui/react';
+import React, { useState } from 'react';
+import { useQuery } from 'urql';
+import { Donation } from '../types';
 import LeaderboardItem from './LeaderboardItem';
+
+const DonationsQuery = `
+  query Query($orderBy: OrderByParams) {
+    donations(orderBy: $orderBy) {
+      count
+      id
+      displayName
+      createdAt
+      message
+      team
+    }
+  }
+`;
+
+type DonationsQueryRes = {
+  donations: Donation[];
+};
 
 interface Props {}
 
 export default function Leaderboard(props: Props) {
+  const [field, setOrderByField] = useState('createdAt');
+
+  const [{ data, fetching, error }] = useQuery<DonationsQueryRes>({
+    query: DonationsQuery,
+    variables: {
+      orderBy: {
+        field,
+        direction: 'desc',
+      },
+    },
+  });
+
+  if (error) return <p>Something went wrong... {error.message}</p>;
+  if (fetching || !data) return <p>Loading...</p>;
+
   return (
     <Box w='100%'>
-      <Heading>LEADERBOARD</Heading>
       <VStack spacing={4}>
-        <LeaderboardItem
-          donation={{
-            displayName: 'Mr Beast',
-            count: 100,
-            createdAt: '2021-10-29T17:31:11.795Z',
-            message: 'message',
-            team: 'team',
-          }}
-        />
-        <LeaderboardItem
-          donation={{
-            displayName: 'Mr Beast',
-            count: 10000,
-            createdAt: '2021-10-29T17:31:11.795Z',
-          }}
-        />
-        <LeaderboardItem
-          donation={{
-            displayName: 'Mr Beast',
-            count: 1000,
-            createdAt: '2021-10-29T17:31:11.795Z',
-          }}
-        />
+        <Heading as='h1' size='2xl' textTransform='uppercase'>
+          leaderboard
+        </Heading>
+
+        <RadioGroup onChange={setOrderByField} value={field}>
+          <Stack direction='row'>
+            <Radio value='createdAt'>Most Recent</Radio>
+            <Radio value='count'>Most Pounds</Radio>
+          </Stack>
+        </RadioGroup>
+
+        {data.donations.map(donation => (
+          <LeaderboardItem donation={donation} />
+        ))}
       </VStack>
     </Box>
   );
